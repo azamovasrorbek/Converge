@@ -1,0 +1,379 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CONVERGE | Professional Image-to-PDF Synthesis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #05070a; color: #f8fafc; scroll-behavior: smooth; }
+        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .text-gradient { background: linear-gradient(to right, #818cf8, #e879f9); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        canvas { position: fixed; top: 0; left: 0; z-index: -1; opacity: 0.3; }
+        .upload-glow { box-shadow: 0 0 30px rgba(79, 70, 229, 0.15); }
+        details summary::-webkit-details-marker { display: none; }
+
+        /* Success Message Animation */
+        #success-toast { transform: translateY(100px); transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+        #success-toast.show { transform: translateY(0); opacity: 1; }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div id="success-toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] opacity-0 pointer-events-none">
+        <div class="bg-indigo-600 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 border border-indigo-400">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            <span class="text-sm font-bold uppercase tracking-widest">Comment Protocol Success</span>
+        </div>
+    </div>
+
+    <canvas id="neuralCanvas"></canvas>
+
+    <nav class="flex items-center justify-between px-10 py-6 sticky top-0 z-50 glass">
+        <div class="text-xl font-extrabold tracking-tighter flex items-center gap-2">
+            <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center italic shadow-[0_0_15px_rgba(79,70,229,0.5)]">C</div>
+            CONVERGE
+        </div>
+        <div class="hidden md:flex space-x-8 text-xs font-bold uppercase tracking-widest text-slate-400">
+            <a href="#how" class="hover:text-white transition">Process</a>
+            <a href="#features" class="hover:text-white transition">Features</a>
+            <a href="#use-cases" class="hover:text-white transition">Use Cases</a>
+            <a href="#faq" class="hover:text-white transition">FAQ</a>
+        </div>
+
+        <div class="flex items-center group cursor-pointer" onclick="document.getElementById('comments-section').scrollIntoView({ behavior: 'smooth' })">
+            <div class="relative">
+                <div class="absolute -inset-1 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full blur opacity-25 group-hover:opacity-75 transition duration-500"></div>
+                <div class="relative flex items-center justify-center w-10 h-10 bg-black rounded-full border border-white/10 text-white font-black tracking-tighter text-sm shadow-2xl">
+                    AA
+                </div>
+            </div>
+            <span class="ml-3 text-[10px] uppercase tracking-[0.3em] text-slate-500 group-hover:text-indigo-400 transition-colors hidden sm:block">
+                Azamov Asrorbek
+            </span>
+        </div>
+    </nav>
+
+    <header class="relative pt-20 pb-20 px-6 max-w-7xl mx-auto">
+        <div class="grid lg:grid-cols-2 gap-16 items-center">
+            <div>
+                <h1 class="text-5xl md:text-7xl font-extrabold tracking-tighter mb-6 leading-tight">
+                    Transform Multiple Photos into <span class="text-gradient">One Professional PDF.</span>
+                </h1>
+                <p class="text-slate-400 text-lg mb-8 max-w-lg">
+                    Merge your captures, documents, and memories into a single, high-quality file instantly. Simple, fast, and entirely private.
+                </p>
+                <div class="flex items-center gap-5 p-4 rounded-2xl glass mb-10 border-l-4 border-indigo-500 max-w-sm">
+                    <img src="{% static 'img/myphoto.jpg' %}" alt="Founder" class="w-14 h-14 rounded-xl object-cover grayscale hover:grayscale-0 transition-all duration-500">
+                    <div>
+                        <h4 class="text-sm font-bold">Azamov Asrorbek</h4>
+                        <p class="text-[10px] uppercase tracking-widest text-indigo-400">Founder & Architect</p>
+                        <p class="text-[11px] text-slate-500 mt-1 italic">"We built Converge to make document handling feel like magic."</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass p-8 rounded-[2.5rem] upload-glow">
+                <div id="dropZone" class="border-2 border-dashed border-white/10 rounded-2xl p-10 text-center hover:border-indigo-500/50 transition-all bg-black/40 cursor-pointer">
+                    <input type="file" id="fileInput" multiple class="hidden" accept="image/*">
+                    <div class="mb-4 flex justify-center">
+                        <svg class="w-12 h-12 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                    </div>
+                    <p class="text-xl font-bold mb-1">Click to Upload Images</p>
+                    <p class="text-slate-500 text-xs mb-6 uppercase tracking-widest">JPG, PNG, WebP supported</p>
+                    <button onclick="document.getElementById('fileInput').click()" class="bg-indigo-600 hover:bg-indigo-700 px-8 py-3 rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/20">Select Assets</button>
+                </div>
+                <div id="previewArea" class="grid grid-cols-4 gap-3 mt-6 max-h-40 overflow-y-auto"></div>
+                <button id="convertBtn" class="hidden w-full mt-6 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl font-bold uppercase tracking-widest text-xs hover:opacity-90 transition-all">Synthesize PDF</button>
+                <p class="text-center text-[10px] text-slate-500 mt-4 uppercase tracking-[0.2em]">Privacy Shield Active: Files are never stored.</p>
+            </div>
+        </div>
+    </header>
+
+    <section id="how" class="py-24 px-6 glass">
+        <div class="max-w-7xl mx-auto">
+            <h2 class="text-3xl font-bold mb-16 text-center uppercase tracking-widest">The Synthesis Protocol</h2>
+            <div class="grid md:grid-cols-3 gap-12">
+                <div class="text-center">
+                    <div class="text-indigo-500 text-4xl font-black mb-4">01</div>
+                    <h3 class="text-xl font-bold mb-4">Upload</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">Select multiple photos from your device.</p>
+                </div>
+                <div class="text-center">
+                    <div class="text-indigo-500 text-4xl font-black mb-4">02</div>
+                    <h3 class="text-xl font-bold mb-4">Convert</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">Images are merged with accurate rendering.</p>
+                </div>
+                <div class="text-center">
+                    <div class="text-indigo-500 text-4xl font-black mb-4">03</div>
+                    <h3 class="text-xl font-bold mb-4">Download</h3>
+                    <p class="text-slate-400 text-sm leading-relaxed">Professional PDF ready instantly.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="features" class="py-24 px-6 max-w-7xl mx-auto">
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div class="p-8 glass rounded-2xl hover:bg-white/5 transition">
+                <h4 class="font-bold mb-3 uppercase tracking-tighter text-indigo-400">Auto-Processing</h4>
+                <p class="text-slate-400 text-sm">Intelligent scaling and merging without manual adjustments.</p>
+            </div>
+            <div class="p-8 glass rounded-2xl hover:bg-white/5 transition">
+                <h4 class="font-bold mb-3 uppercase tracking-tighter text-indigo-400">High-Density Export</h4>
+                <p class="text-slate-400 text-sm">Industry-standard PDF output suitable for printing and archiving.</p>
+            </div>
+            <div class="p-8 glass rounded-2xl hover:bg-white/5 transition">
+                <h4 class="font-bold mb-3 uppercase tracking-tighter text-indigo-400">Universal Support</h4>
+                <p class="text-slate-400 text-sm">Seamlessly handles JPG, PNG, BMP, and modern image formats.</p>
+            </div>
+            <div class="p-8 glass rounded-2xl hover:bg-white/5 transition">
+                <h4 class="font-bold mb-3 uppercase tracking-tighter text-indigo-400">No Skills Required</h4>
+                <p class="text-slate-400 text-sm">Designed for everyone. Clean UI makes conversion effortless.</p>
+            </div>
+            <div class="p-8 glass rounded-2xl hover:bg-white/5 transition">
+                <h4 class="font-bold mb-3 uppercase tracking-tighter text-indigo-400">Mobile Optimized</h4>
+                <p class="text-slate-400 text-sm">Convert photos directly from your smartphone camera roll.</p>
+            </div>
+            <div class="p-8 glass rounded-2xl hover:bg-white/5 transition">
+                <h4 class="font-bold mb-3 uppercase tracking-tighter text-indigo-400">Privacy First</h4>
+                <p class="text-slate-400 text-sm">Encrypted local processing. Your data stays on your device.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="use-cases" class="py-24 px-6 glass">
+        <div class="max-w-7xl mx-auto">
+            <h2 class="text-3xl font-bold mb-16 text-center">Built for Every Workflow</h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="flex gap-6 p-6">
+                    <div class="w-1 bg-indigo-500"></div>
+                    <div>
+                        <h5 class="font-bold mb-2">School & Work Submissions</h5>
+                        <p class="text-slate-400 text-sm">Bundle assignment photos or project screenshots into one neat submission file.</p>
+                    </div>
+                </div>
+                <div class="flex gap-6 p-6">
+                    <div class="w-1 bg-indigo-500"></div>
+                    <div>
+                        <h5 class="font-bold mb-2">Personal Archiving</h5>
+                        <p class="text-slate-400 text-sm">Turn physical photo albums into digital PDF flipbooks for long-term storage.</p>
+                    </div>
+                </div>
+                <div class="flex gap-6 p-6">
+                    <div class="w-1 bg-indigo-500"></div>
+                    <div>
+                        <h5 class="font-bold mb-2">Photo Documentation</h5>
+                        <p class="text-slate-400 text-sm">Contractors and inspectors can merge field photos into cohesive site reports.</p>
+                    </div>
+                </div>
+                <div class="flex gap-6 p-6">
+                    <div class="w-1 bg-indigo-500"></div>
+                    <div>
+                        <h5 class="font-bold mb-2">Secure Document Sharing</h5>
+                        <p class="text-slate-400 text-sm">Combine IDs, receipts, or contracts into a single file for legal or bank sharing.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="faq" class="py-24 px-6 max-w-3xl mx-auto">
+        <h2 class="text-3xl font-bold mb-12 text-center">Frequently Asked Questions</h2>
+        <div class="space-y-4">
+            <details class="glass p-6 rounded-xl group cursor-pointer">
+                <summary class="font-bold flex justify-between items-center list-none">What image formats do you support? <span class="group-open:rotate-180 transition-transform">↓</span></summary>
+                <p class="pt-4 text-slate-400 text-sm leading-relaxed">We support JPG, JPEG, PNG, BMP, and WebP. For iPhone users, we recommend converting HEIC to JPG before upload for the best results.</p>
+            </details>
+            <details class="glass p-6 rounded-xl group cursor-pointer">
+                <summary class="font-bold flex justify-between items-center list-none">Is there a file limit? <span class="group-open:rotate-180 transition-transform">↓</span></summary>
+                <p class="pt-4 text-slate-400 text-sm leading-relaxed">You can synthesize up to 50 images into a single PDF per session to maintain peak processing speed.</p>
+            </details>
+            <details class="glass p-6 rounded-xl group cursor-pointer">
+                <summary class="font-bold flex justify-between items-center list-none">How is my privacy handled? <span class="group-open:rotate-180 transition-transform">↓</span></summary>
+                <p class="pt-4 text-slate-400 text-sm leading-relaxed">Unlike other services, your photos are processed in the browser’s temporary memory. We never store your data on our servers.</p>
+            </details>
+            <details class="glass p-6 rounded-xl group cursor-pointer">
+                <summary class="font-bold flex justify-between items-center list-none">Will the PDF quality be high? <span class="group-open:rotate-180 transition-transform">↓</span></summary>
+                <p class="pt-4 text-slate-400 text-sm leading-relaxed">Yes. We use high-resolution rendering to ensure your text and images remain sharp for both digital viewing and printing.</p>
+            </details>
+            <details class="glass p-6 rounded-xl group cursor-pointer">
+                <summary class="font-bold flex justify-between items-center list-none">Is this service mobile-friendly? <span class="group-open:rotate-180 transition-transform">↓</span></summary>
+                <p class="pt-4 text-slate-400 text-sm leading-relaxed">Absolutely. Converge is designed with a responsive UI that works perfectly on iOS and Android browsers.</p>
+            </details>
+            <details class="glass p-6 rounded-xl group cursor-pointer">
+                <summary class="font-bold flex justify-between items-center list-none">Do I need to install any software? <span class="group-open:rotate-180 transition-transform">↓</span></summary>
+                <p class="pt-4 text-slate-400 text-sm leading-relaxed">No. Converge is a 100% web-based tool. You only need a modern browser and an internet connection.</p>
+            </details>
+        </div>
+    </section>
+
+    <section id="comments-section" class="py-24 max-w-4xl mx-auto px-6">
+        <div class="glass p-10 rounded-[2.5rem] border-t border-white/10">
+            <h2 class="text-2xl font-bold mb-2">Protocol Feedback</h2>
+            <p class="text-slate-400 mb-8 text-sm uppercase tracking-widest">Public Archive</p>
+
+            <div id="comment-list" class="space-y-6 mb-10 max-h-[400px] overflow-y-auto pr-2">
+                {% for comment in comments %}
+                <div class="flex gap-4 p-4 rounded-xl bg-white/5 border border-white/5">
+                    <div class="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center font-bold text-indigo-400">
+                        {{ comment.name|slice:":1"|upper }}
+                    </div>
+                    <div>
+                        <h5 class="text-sm font-bold">{{ comment.name }} <span class="text-slate-600 font-normal ml-2 text-[10px]">{{ comment.created_at|timesince }} ago</span></h5>
+                        <p class="text-slate-400 text-sm mt-1">{{ comment.text }}</p>
+                    </div>
+                </div>
+                {% empty %}
+                <p id="no-comments" class="text-center text-slate-500 italic text-sm">No transmissions logged yet. Be the first.</p>
+                {% endfor %}
+            </div>
+
+            <div class="relative">
+                {% csrf_token %}
+                <textarea id="commentText" class="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm focus:outline-none focus:border-indigo-500 transition-all text-white" rows="3" placeholder="Log your experience..."></textarea>
+                <button id="submitComment" class="mt-4 px-6 py-2 bg-white text-black rounded-full font-bold text-xs uppercase tracking-tighter hover:bg-indigo-400 transition-all">
+                    Submit
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <footer class="py-16 px-10 glass border-t border-white/5">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center opacity-60 text-[10px] uppercase tracking-[0.4em]">
+            <div>© 2026 CONVERGE SYSTEMS.</div>
+            <div class="flex gap-8 mt-4 md:mt-0">
+                <a href="#">Privacy</a><a href="#">Terms</a><a href="#">Support</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+    // --- COMMENT SECTION SCRIPT ---
+    const submitBtn = document.getElementById('submitComment');
+    const commentText = document.getElementById('commentText');
+    const commentList = document.getElementById('comment-list');
+    const toast = document.getElementById('success-toast');
+
+    submitBtn.addEventListener('click', () => {
+        const text = commentText.value.trim();
+        if (!text) return;
+
+        const formData = new FormData();
+        formData.append('text', text);
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+        // AJAX POST to Django
+        fetch('/post-comment/', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Success Message Appearance
+                toast.classList.add('show');
+                setTimeout(() => toast.classList.remove('show'), 3000);
+
+                // Add comment to UI instantly
+                const noComments = document.getElementById('no-comments');
+                if (noComments) noComments.remove();
+
+                const newComment = `
+                    <div class="flex gap-4 p-4 rounded-xl bg-indigo-500/5 border border-indigo-500/20 animate-pulse">
+                        <div class="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center font-bold text-indigo-400">U</div>
+                        <div>
+                            <h5 class="text-sm font-bold">User <span class="text-slate-600 font-normal ml-2 text-[10px]">Just now</span></h5>
+                            <p class="text-slate-400 text-sm mt-1">${data.text}</p>
+                        </div>
+                    </div>
+                `;
+                commentList.insertAdjacentHTML('afterbegin', newComment);
+                commentText.value = '';
+            }
+        });
+    });
+
+    // --- (Keep your existing PDF & Neural Canvas script here) ---
+    // (Included the code you provided in your prompt)
+    const { jsPDF } = window.jspdf;
+    const fileInput = document.getElementById('fileInput');
+    const previewArea = document.getElementById('previewArea');
+    const convertBtn = document.getElementById('convertBtn');
+    let imageFiles = [];
+
+    fileInput.addEventListener('change', (e) => {
+        const newFiles = Array.from(e.target.files);
+        imageFiles = [...imageFiles, ...newFiles];
+        renderPreviews();
+    });
+
+    function renderPreviews() {
+        previewArea.innerHTML = '';
+        if (imageFiles.length > 0) convertBtn.classList.remove('hidden');
+        else convertBtn.classList.add('hidden');
+
+        imageFiles.forEach((file, index) => {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const container = document.createElement('div');
+                container.className = "relative group h-16 rounded-lg border border-white/20 overflow-hidden shadow-lg";
+                const imgDiv = document.createElement('div');
+                imgDiv.className = "w-full h-full bg-center bg-cover";
+                imgDiv.style.backgroundImage = `url(${event.target.result})`;
+                const removeBtn = document.createElement('button');
+                removeBtn.innerHTML = "&times;";
+                removeBtn.className = "absolute top-0 right-0 bg-red-600/80 hover:bg-red-600 text-white text-xs w-5 h-5 flex items-center justify-center rounded-bl-lg transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100";
+                removeBtn.onclick = (e) => { e.preventDefault(); removeImage(index); };
+                container.appendChild(imgDiv);
+                container.appendChild(removeBtn);
+                previewArea.appendChild(container);
+            }
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function removeImage(index) { imageFiles.splice(index, 1); renderPreviews(); }
+
+    convertBtn.addEventListener('click', async () => {
+        if (imageFiles.length === 0) return;
+        convertBtn.textContent = 'SYNTHESIZING...';
+        convertBtn.disabled = true;
+        const doc = new jsPDF('p', 'mm', 'a4');
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 10;
+        for (let i = 0; i < imageFiles.length; i++) {
+            const imgData = await readFile(imageFiles[i]);
+            const props = doc.getImageProperties(imgData);
+            let width = props.width; let height = props.height;
+            const ratio = width / height;
+            const maxWidth = pageWidth - (margin * 2);
+            const maxHeight = pageHeight - (margin * 2);
+            if (width > maxWidth) { width = maxWidth; height = width / ratio; }
+            if (height > maxHeight) { height = maxHeight; width = height * ratio; }
+            const x = (pageWidth - width) / 2; const y = (pageHeight - height) / 2;
+            if (i > 0) doc.addPage();
+            doc.addImage(imgData, 'JPEG', x, y, width, height);
+        }
+        doc.save('converged-document.pdf');
+        convertBtn.textContent = 'GENERATE PDF';
+        convertBtn.disabled = false;
+    });
+
+    function readFile(file) { return new Promise(res => { const r = new FileReader(); r.onload = e => res(e.target.result); r.readAsDataURL(file); }); }
+
+    const canvas = document.getElementById('neuralCanvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    function init() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    class P { constructor() { this.x = Math.random()*canvas.width; this.y = Math.random()*canvas.height; this.vx = (Math.random()-0.5)*0.3; this.vy = (Math.random()-0.5)*0.3; } update() { this.x += this.vx; this.y += this.vy; if(this.x<0||this.x>canvas.width) this.vx*=-1; if(this.y<0||this.y>canvas.height) this.vy*=-1; } }
+    for(let i=0; i<40; i++) particles.push(new P());
+    function draw() { ctx.clearRect(0,0,canvas.width,canvas.height); ctx.strokeStyle = '#4f46e5'; ctx.lineWidth = 0.2; particles.forEach(p => { p.update(); particles.forEach(p2 => { let d = Math.hypot(p.x-p2.x, p.y-p2.y); if(d<150) { ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p2.x,p2.y); ctx.stroke(); } }); }); requestAnimationFrame(draw); }
+    window.addEventListener('resize', init); init(); draw();
+    </script>
+</body>
+</html>
