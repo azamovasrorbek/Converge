@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-k1@b6j1cr8xg&yek53e3%2$a5n&$caxrzsn%*rr*5@@8w9q)8p
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ["converge-3235.onrender.com"]
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -135,4 +135,4 @@ import os
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-key")  # fallback for local dev
 DEBUG = os.environ.get("DEBUG", "True") == "True"
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "").split(",")  # comma-separated list
+ALLOWED_HOSTS = ["*"]
